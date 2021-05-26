@@ -23,35 +23,40 @@ dialect._backslash_escapes = False
 dialect.supports_sane_multi_rowcount = True  # psycopg 2.0.9+
 dialect._has_native_hstore = True
 
+# NOTE: sqlalchemy.sql.dml.Insert no longer has a parameters attribute.
+# refs:
+#   1. https://github.com/quantmind/aio-openapi/blob/d32b1d97d3f1358aa7306b6a8074bb6ec27bab9f/openapi/db/dbmodel.py#L97
+#   1. https://github.com/encode/databases/blob/master/databases/backends/postgres.py#L212
+#   1. https://github.com/CanopyTax/asyncpgsa/issues/114
 
-def _execute_defaults(query: Union[Insert, Update], attr_name: str) -> None:
-    # query.parameters could be a list in a multi row insert
-    if isinstance(query.parameters, list):
-        for param in query.parameters:
-            _execute_default_attr(query, param, attr_name)
-    else:
-        query.parameters = query.parameters or {}
-        _execute_default_attr(query, query.parameters, attr_name)
-    return None
-
-
-def _execute_default_attr(
-    query: Union[Insert, Update], param: Dict, attr_name: str
-) -> None:
-    for col in query.table.columns:
-        attr = getattr(col, attr_name)
-        if attr and param.get(col.name) is None:
-            if attr.is_scalar:
-                param[col.name] = attr.arg
-            elif attr.is_callable:
-                param[col.name] = attr.arg({})
+# def _execute_defaults(query: Union[Insert, Update], attr_name: str) -> None:
+#     # query.parameters could be a list in a multi row insert
+#     if isinstance(query.parameters, list):
+#         for param in query.parameters:
+#             _execute_default_attr(query, param, attr_name)
+#     else:
+#         query.parameters = query.parameters or {}
+#         _execute_default_attr(query, query.parameters, attr_name)
+#     return None
+# 
+# 
+# def _execute_default_attr(
+#     query: Union[Insert, Update], param: Dict, attr_name: str
+# ) -> None:
+#     for col in query.table.columns:
+#         attr = getattr(col, attr_name)
+#         if attr and param.get(col.name) is None:
+#             if attr.is_scalar:
+#                 param[col.name] = attr.arg
+#             elif attr.is_callable:
+#                 param[col.name] = attr.arg({})
 
 
 def compile_query(query: ClauseType) -> QueryTuple:
-    if isinstance(query, Insert):
-        _execute_defaults(cast(Insert, query), "default")
-    elif isinstance(query, Update):
-        _execute_defaults(cast(Update, query), "onupdate")
+    # if isinstance(query, Insert):
+    #     _execute_defaults(cast(Insert, query), "default")
+    # elif isinstance(query, Update):
+    #     _execute_defaults(cast(Update, query), "onupdate")
 
     compiled = query.compile(dialect=dialect)
     compiled_params = sorted(compiled.params.items())
